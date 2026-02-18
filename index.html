@@ -395,35 +395,20 @@ optimizedStops.forEach(function(stop, i){
 function downloadCSV(csv){
 
   document.getElementById("status4").innerHTML =
-    "Status: CSV downloaded successfully ✔";    
+    "Status: CSV downloaded successfully ✔";
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 
-  // ⭐ Fix for iframe / Experience Builder
-  if (window.navigator.msSaveBlob) {
-    // For older Edge
-    window.navigator.msSaveBlob(blob, "optimized_route.csv");
-  } else {
+  const url = URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
+  // ⭐ iframe-safe download
+  window.open(url, "_blank");
 
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute("download", "optimized_route.csv");
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-
-    // ⭐ Important: trigger real click event
-    link.dispatchEvent(new MouseEvent("click"));
-
-    document.body.removeChild(link);
-  }
 }
 
 
 });
 </script>
 </body>
+
 </html>
