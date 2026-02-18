@@ -400,17 +400,11 @@ function downloadCSV(csv){
   const encodedUri =
     "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
 
-  const link = document.createElement("a");
+  // ⭐ iframe-safe forced download
+  window.location.href = encodedUri;
 
-  link.href = encodedUri;
-  link.download = "optimized_route.csv";
-
-  document.body.appendChild(link);
-
-  link.click();
-
-  document.body.removeChild(link);
 }
+
 
 
 
@@ -419,4 +413,5 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
