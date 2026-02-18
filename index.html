@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Route Planner App</title>
+<link rel="stylesheet"
+href="https://js.arcgis.com/4.29/esri/themes/light/main.css">
+
+<script src="https://js.arcgis.com/4.29/"></script>
+
+<style>
+html, body {
+  height:100%;
+  margin:0;
+  font-family: Arial, sans-serif;
+}
+
+#viewDiv{
+  flex:1;
+  height:100%;
+}
+
+/* Header */
+#header{
+  height:60px;
+  background:#2c3e50;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+  font-size:20px;
+  font-weight:bold;
+}
+
+#header h1{
+  margin:0;
+}
+
+/* LEFT LOGO */
+#logoLeft{
+  position:absolute;
+  left:15px;
+  height:40px;
+  object-fit:contain;
+}
+
+/* RIGHT LOGO */
+#logoRight{
+  position:absolute;
+  right:15px;
+  height:40px;
+  object-fit:contain;
+}
+
+/* Main layout */
+#container{
+  display:flex;
+  height:calc(100% - 60px);
+}
+
+/* Left panel */
+#panel{
+  width:320px;
+  background: linear-gradient(180deg,#1f4e79,#2b6ca3,#3a87c9);
+  padding:15px;
+  overflow-y:auto;
+  color:white;
+}
+
+/* Step boxes */
+.stepBox{
+  background:rgba(255,255,255,0.95);
+  color:black;
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.25);
+}
+
+/* Status text */
+.status{
+  margin-top:10px;
+  font-size:13px;
+  padding:6px;
+  background:#e9f3ff;
+  border-left:4px solid #0079c1;
+  border-radius:4px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <!-- LEFT LOGO -->
+    <img id="logoLeft" src="https://maconbibb.maps.arcgis.com/sharing/rest/content/items/eb449435963748b2bf004ebaf25fb4d8/data" alt="MBC Logo">
+
+  <h1>Create My Route</h1>
+  
+    <!-- RIGHT LOGO -->
+  <img id="logoRight" src="https://maconbibb.maps.arcgis.com/sharing/rest/content/items/293c0d165e2c455b99c2af8fd3ae51f0/data" alt="MBIT Logo">
+  
+</div>
+
+<!-- MAIN CONTAINER -->
+<div id="container">
+
+  <!-- LEFT STEP PANEL -->
+  <div id="panel">
+
+    <!-- STEP 1 -->
+    <div class="stepBox">
+      <h3>Step 1: Search starting location</h3>
+      <div id="searchDiv"></div>
+      <div class="status" id="status1">
+        Status: Not initiated
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="stepBox">
+      <h3>Step 2: Choose CSV File</h3>
+      <input type="file" id="csvFile" accept=".csv">
+      <div class="status" id="status2">
+        Status: Not initiated
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="stepBox">
+      <h3>Step 3: Create Route</h3>
+      <button id="routeBtn">Create Route</button>
+      <div class="status" id="status3">
+        Status: Not initiated
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="stepBox">
+      <h3>Step 4: Export CSV</h3>
+      <button id="exportBtn">Export CSV</button>
+      <div class="status" id="status4">
+        Status: Not initiated
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MAP (must be OUTSIDE panel) -->
+  <div id="viewDiv"></div>
+
+</div>
+
+
+<script>
+require([
+  "esri/config",
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/layers/GraphicsLayer",
+  "esri/Graphic",
+  "esri/rest/locator", 
+  "esri/rest/route",
+  "esri/rest/support/RouteParameters",
+  "esri/rest/support/FeatureSet",
+  "esri/widgets/Search"   // ⭐ ADD THIS
+],
+
+function(
+  esriConfig,
+  Map,
+  MapView,
+  GraphicsLayer,
+  Graphic,
+  locator,
+  route,
+  RouteParameters,
+  FeatureSet,
+  Search   // ⭐ ADD
+){
+
+
+  esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurJ0ysjuE9PasN7JlHIGytBbu3JTM9cMttI00kw_VLiWHJNGuwkZwcZffK8jbnHz542IXdVCAXWhpCw1M4w0eq28RMqsxckazv7WFm7B-9eZxsva3FJYgbsz7jKMzNxK2mi4FcYJI1rQATVTnGsxKCQq2ABWKa0-PxKEtNhW-zIFUAc9SHSylbl1a-hjxeoor30dzX-9wQ0Fc5ce-bcEGd_E.AT1_c5EykO08";
+
+  const geocodeURL = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer";
+  const routeURL   = "https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+
+  const map = new Map({ basemap: "arcgis-navigation" });
+
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [-83.63, 32.84],
+    zoom: 11
+  });
+  
+const searchWidget = new Search({
+  view: view,
+  popupEnabled:false
+});
+
+searchWidget.container = "searchDiv";
+
+
+
+  const graphicsLayer = new GraphicsLayer();
+  map.add(graphicsLayer);
+
+  let stops = [];
+  let optimizedStops = [];
+  let startLocation = null;
+  let stopAddressLookup = {};
+  
+searchWidget.on("select-result", function(event){
+
+  startLocation = event.result.feature.geometry;
+
+  document.getElementById("status1").innerHTML =
+    "Status: Starting address placed on map ✔";
+
+});
+
+
+  // CSV Upload
+  document.getElementById("csvFile").addEventListener("change", async function(e){
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).filter(r => r.trim().length > 0);
+
+    stops = [];
+    graphicsLayer.removeAll();
+
+    for (let i = 1; i < rows.length; i++) {
+      const cols = rows[i].split(",").map(c => c.trim());
+      if (cols.length < 3) continue;
+
+      const address = (cols[0] + " " + cols[1] + " " + cols[2]).trim();
+
+      try {
+        const response = await locator.addressToLocations(geocodeURL, {
+          address: { SingleLine: address },
+          maxLocations: 1
+        });
+
+if (response.length > 0) {
+  const stopName = "Stop_" + i;  // ✅ declare first
+
+  const graphic = new Graphic({    // ✅ then create the graphic
+    geometry: response[0].location,
+    attributes: {
+      Name: stopName
+    },
+    symbol: { type: "simple-marker", size: 8 }
+  });
+
+  // ⭐ save address externally
+  stopAddressLookup[stopName] = response[0].address;
+
+  graphicsLayer.add(graphic);
+  stops.push(graphic);
+}
+
+      } catch (err) {
+        console.error("Geocode error for address:", address, err);
+      }
+    }
+
+document.getElementById("status2").innerHTML =
+  "Status: Route addresses geocoded on map ✔ (" + stops.length + " stops)";
+  
+// ⭐ Zoom to all geocoded stops
+view.goTo(graphicsLayer.graphics);
+  });
+
+  // ROUTE
+document.getElementById("routeBtn").addEventListener("click", async function(){
+
+  if (stops.length < 1) {
+    alert("Need at least 1 stop");
+    return;
+  }
+
+  if(!startLocation){
+    alert("Select starting location using search");
+    return;
+  }
+
+  const startGraphic = new Graphic({
+    geometry: startLocation,
+    symbol:{
+      type:"simple-marker",
+      color:[0,255,0],
+      size:12
+    },
+    attributes:{ Name:"Start" }
+  });
+
+  const endGraphic = new Graphic({
+    geometry: startLocation,
+    attributes:{ Name:"End" }
+  });
+
+  const allStops = [
+    startGraphic,
+    ...stops,
+    endGraphic
+  ];
+
+  const routeParams = new RouteParameters({
+    stops: new FeatureSet({features: allStops}),
+    returnRoutes: true,
+    returnStops: true,
+    findBestSequence: true,
+    preserveFirstStop: true,
+    preserveLastStop: true,
+    outSpatialReference: view.spatialReference
+  });
+
+  // ✅ ONLY HERE data exists
+  const data = await route.solve(routeURL, routeParams);
+
+  console.log("FULL ROUTE RESPONSE:", data);
+
+  graphicsLayer.removeAll();
+
+  const result = data.routeResults[0];
+
+  const routeGraphic = result.route;
+
+  routeGraphic.symbol = {
+    type:"simple-line",
+    width:4
+  };
+
+graphicsLayer.add(routeGraphic);
+// ⭐ Zoom to full route extent
+view.goTo(routeGraphic.geometry.extent.expand(1.3));
+document.getElementById("status3").innerHTML =
+  "Status: Route creation successful ✔";
+
+ // ⭐ ArcGIS Route API returns stops here
+// get optimized stops from route result
+optimizedStops = result.stops;
+
+if (!optimizedStops || optimizedStops.length === 0) {
+  console.log("FULL ROUTE RESULT:", result);
+  alert("Route created but stops missing.");
+  return;
+}
+
+
+optimizedStops.sort((a,b)=>{
+    return (a.attributes?.Sequence || 0) -
+           (b.attributes?.Sequence || 0);
+});
+
+console.log("Optimized order:", optimizedStops);
+
+
+});
+
+  // EXPORT
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    if (!optimizedStops || optimizedStops.length === 0){
+      alert("No route available yet.");
+      return;
+    }
+
+    let csv = "Sequence,Address,Longitude,Latitude\n";
+
+optimizedStops.forEach(function(stop, i){
+
+  const stopName = stop.attributes?.Name;
+
+  const addr =
+    stopAddressLookup[stopName] ||
+    stop.attributes?.Name || "";
+
+  csv += (i+1) + "," +
+         '"' + addr + '"' + "," +
+         stop.geometry.x + "," +
+         stop.geometry.y + "\n";
+});
+
+
+
+
+    downloadCSV(csv);
+  });
+
+function downloadCSV(csv){
+
+  document.getElementById("status4").innerHTML =
+    "Status: CSV downloaded successfully ✔";    
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+  // ⭐ Fix for iframe / Experience Builder
+  if (window.navigator.msSaveBlob) {
+    // For older Edge
+    window.navigator.msSaveBlob(blob, "optimized_route.csv");
+  } else {
+
+    const link = document.createElement("a");
+
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", "optimized_route.csv");
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+
+    // ⭐ Important: trigger real click event
+    link.dispatchEvent(new MouseEvent("click"));
+
+    document.body.removeChild(link);
+  }
+}
+
+
+});
+</script>
+</body>
+</html>
