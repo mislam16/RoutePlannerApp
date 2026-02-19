@@ -219,8 +219,16 @@ searchWidget.container = "searchDiv";
 
 
 
-  const graphicsLayer = new GraphicsLayer();
-  map.add(graphicsLayer);
+const startLayer = new GraphicsLayer();
+const stopLayer = new GraphicsLayer();
+const routeLayer = new GraphicsLayer();
+
+map.addMany([
+  routeLayer,   // route below
+  stopLayer,    // stops above route
+  startLayer    // start on top
+]);
+
 
   let stops = [];
   let optimizedStops = [];
@@ -295,7 +303,7 @@ for (let i = 1; i < rows.length; i++) {
 
       stopAddressLookup[stopName] = response[0].address;
 
-      graphicsLayer.add(graphic);
+      stopLayer.add(graphic);
       stops.push(graphic);
     }
 
@@ -313,7 +321,7 @@ document.getElementById("status2").innerHTML =
   "Status: Route addresses geocoded on map ✔ (" + stops.length + " stops)";
   
 // ⭐ Zoom to all geocoded stops
-view.goTo(graphicsLayer.graphics);
+view.goTo(stopLayer.graphics);
   });
 
   // ROUTE
@@ -330,6 +338,9 @@ document.getElementById("routeBtn").addEventListener("click", async function(){
   }
 
 const startGraphic = new Graphic({
+  startLayer.removeAll();
+startLayer.add(startGraphic);
+
   geometry: startLocation,
   symbol: startSymbol,
   attributes:{ Name:"Start" }
@@ -361,8 +372,6 @@ const startGraphic = new Graphic({
 
   console.log("FULL ROUTE RESPONSE:", data);
 
-  graphicsLayer.removeAll();
-
   const result = data.routeResults[0];
 
   const routeGraphic = result.route;
@@ -372,7 +381,8 @@ const startGraphic = new Graphic({
     width:4
   };
 
-graphicsLayer.add(routeGraphic);
+routeLayer.removeAll();
+routeLayer.add(routeGraphic);;
 // ⭐ Zoom to full route extent
 view.goTo(routeGraphic.geometry.extent.expand(1.3));
 document.getElementById("status3").innerHTML =
@@ -449,6 +459,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
