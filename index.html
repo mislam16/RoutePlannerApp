@@ -275,7 +275,6 @@ searchWidget.on("select-result", function(event){
     const rows = text.split(/\r?\n/).filter(r => r.trim().length > 0);
 
     stops = [];
-    graphicsLayer.removeAll();
 
    const geocodePromises = [];
 
@@ -461,6 +460,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
