@@ -406,36 +406,12 @@ optimizedStops.forEach(function(stop, i){
     downloadCSV(csv);
   });
 
-function downloadCSV(csv) {
-
-  document.getElementById("status4").innerHTML =
-    "Status: CSV downloaded successfully ✔";
-
-  // Create date string YYYY-MM-DD
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0"); // months start at 0
-  const dd = String(today.getDate()).padStart(2, "0");
-  const dateStr = `${yyyy}-${mm}-${dd}`;
-
-  const filename = `optimized_route_${dateStr}.csv`;
-
-  // Create a temporary <a> element
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.display = "none";
-
-  document.body.appendChild(link);
-  link.click();
-
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url); // free memory
+function downloadCSV(csv){ 
+  document.getElementById("status4").innerHTML = "Status: CSV downloaded successfully ✔"; 
+  const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); 
+  // ⭐ iframe-safe forced download 
+  window.location.href = encodedUri; 
 }
-
 
 
 
@@ -444,6 +420,7 @@ function downloadCSV(csv) {
 </body>
 
 </html>
+
 
 
 
