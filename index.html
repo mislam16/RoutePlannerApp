@@ -157,6 +157,8 @@ html, body {
 <script>
 require([
   "esri/config",
+  "esri/identity/OAuthInfo",
+  "esri/identity/IdentityManager",
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/GraphicsLayer",
@@ -170,6 +172,8 @@ require([
 
 function(
   esriConfig,
+  OAuthInfo,
+  IdentityManager,
   Map,
   MapView,
   GraphicsLayer,
@@ -181,8 +185,18 @@ function(
   Search   // ⭐ ADD
 ){
 
+const info = new OAuthInfo({
+  appId: "AvfhTlZU4wL8S2sA",
+  portalUrl: "https://maconbibb.maps.arcgis.com",
+  popup: false
+});
 
-  esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurJ0ysjuE9PasN7JlHIGytBbu3JTM9cMttI00kw_VLiWHJNGuwkZwcZffK8jbnHz542IXdVCAXWhpCw1M4w0eq28RMqsxckazv7WFm7B-9eZxsva3FJYgbsz7jKMzNxK2mi4FcYJI1rQATVTnGsxKCQq2ABWKa0-PxKEtNhW-zIFUAc9SHSylbl1a-hjxeoor30dzX-9wQ0Fc5ce-bcEGd_E.AT1_c5EykO08";
+IdentityManager.registerOAuthInfos([info]);
+
+IdentityManager.checkSignInStatus(info.portalUrl + "/sharing")
+  .catch(function(){
+    IdentityManager.getCredential(info.portalUrl + "/sharing");
+  });
 
   const geocodeURL = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer";
   const routeURL   = "https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
@@ -413,5 +427,6 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
