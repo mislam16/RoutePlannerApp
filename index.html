@@ -222,10 +222,13 @@ searchWidget.container = "searchDiv";
 const startLayer = new GraphicsLayer();
 const stopLayer = new GraphicsLayer();
 const routeLayer = new GraphicsLayer();
+const labelLayer = new GraphicsLayer();
+
 
 map.addMany([
   routeLayer,   // route below
   stopLayer,    // stops above route
+  labelLayer,
   startLayer    // start on top
 ]);
 
@@ -375,16 +378,45 @@ startLayer.add(startGraphic);
 
   const result = data.routeResults[0];
 
-  const routeGraphic = result.route;
+  const result = data.routeResults[0];
+routeLayer.removeAll();
 
-  routeGraphic.symbol = {
-    type:"simple-line",
-    width:4
+const routeGeometry = result.route.geometry;
+const path = routeGeometry.paths[0];
+
+for(let i = 0; i < path.length - 1; i++){
+
+  const segmentGeometry = {
+    type: "polyline",
+    paths: [[ path[i], path[i+1] ]],
+    spatialReference: routeGeometry.spatialReference
   };
 
-routeLayer.removeAll();
-routeLayer.add(routeGraphic);;
-// ⭐ Zoom to full route extent
+  const segmentGraphic = new Graphic({
+    geometry: segmentGeometry,
+    symbol:{
+      type:"simple-line",
+      width:4
+    },
+    attributes:{
+      sequence: i+1,
+      from: "Stop " + (i+1),
+      to: "Stop " + (i+2)
+    },
+    popupTemplate:{
+      title: "Route Segment {sequence}",
+      content: `
+        <b>Sequence:</b> {sequence}<br>
+        <b>From:</b> {from}<br>
+        <b>To:</b> {to}
+      `
+    }
+  });
+
+  routeLayer.add(segmentGraphic);
+}
+
+  ⭐ Zoom to full route extent
 view.goTo(routeGraphic.geometry.extent.expand(1.3));
 document.getElementById("status3").innerHTML =
   "Status: Route creation successful ✔";
@@ -404,6 +436,29 @@ optimizedStops.sort((a,b)=>{
     return (a.attributes?.Sequence || 0) -
            (b.attributes?.Sequence || 0);
 });
+labelLayer.removeAll();
+
+optimizedStops.forEach(stop => {
+
+  const labelGraphic = new Graphic({
+    geometry: stop.geometry,
+    symbol:{
+      type:"text",
+      text: stop.attributes.Sequence.toString(),
+      color:"white",
+      haloColor:"black",
+      haloSize:"1px",
+      font:{
+        size:12,
+        weight:"bold"
+      },
+      yoffset:-15
+    }
+  });
+
+  labelLayer.add(labelGraphic);
+
+});
 
 console.log("Optimized order:", optimizedStops);
 
@@ -421,9 +476,10 @@ console.log("Optimized order:", optimizedStops);
 
 optimizedStops.forEach(function(stop, i){
 
-  const stopName = stop.attributes?.Name;
+  
+const stopName = stop.attributes?.Name;
 
-  const addr =
+const addr =
     stopAddressLookup[stopName] ||
     stop.attributes?.Name || "";
 
@@ -460,6 +516,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
