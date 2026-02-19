@@ -226,6 +226,27 @@ searchWidget.container = "searchDiv";
   let optimizedStops = [];
   let startLocation = null;
   let stopAddressLookup = {};
+
+  // ⭐ START location symbol
+const startSymbol = {
+  type: "simple-marker",
+  style: "diamond",   // makes it visually distinct
+  color: [0, 200, 0],
+  size: 14,
+  outline: {
+    color: "white",
+    width: 2
+  }
+};
+
+// ⭐ GEOCODED STOP symbol
+const stopSymbol = {
+  type: "simple-marker",
+  style: "circle",
+  color: [0,0,0],
+  size: 8
+};
+
   
 searchWidget.on("select-result", function(event){
 
@@ -268,7 +289,7 @@ if (response.length > 0) {
     attributes: {
       Name: stopName
     },
-    symbol: { type: "simple-marker", size: 8 }
+ symbol: stopSymbol
   });
 
   // ⭐ save address externally
@@ -303,15 +324,11 @@ document.getElementById("routeBtn").addEventListener("click", async function(){
     return;
   }
 
-  const startGraphic = new Graphic({
-    geometry: startLocation,
-    symbol:{
-      type:"simple-marker",
-      color:[0,255,0],
-      size:12
-    },
-    attributes:{ Name:"Start" }
-  });
+const startGraphic = new Graphic({
+  geometry: startLocation,
+  symbol: startSymbol,
+  attributes:{ Name:"Start" }
+});
 
   const endGraphic = new Graphic({
     geometry: startLocation,
@@ -427,6 +444,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
