@@ -338,13 +338,15 @@ document.getElementById("routeBtn").addEventListener("click", async function(){
   }
 
 const startGraphic = new Graphic({
-  startLayer.removeAll();
-startLayer.add(startGraphic);
-
   geometry: startLocation,
   symbol: startSymbol,
   attributes:{ Name:"Start" }
 });
+
+// ⭐ add to start layer AFTER creation
+startLayer.removeAll();
+startLayer.add(startGraphic);
+
 
   const endGraphic = new Graphic({
     geometry: startLocation,
@@ -459,6 +461,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
