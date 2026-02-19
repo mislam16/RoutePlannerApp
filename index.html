@@ -378,7 +378,6 @@ startLayer.add(startGraphic);
 
   const result = data.routeResults[0];
 
-  const result = data.routeResults[0];
 routeLayer.removeAll();
 
 const routeGeometry = result.route.geometry;
@@ -416,8 +415,8 @@ for(let i = 0; i < path.length - 1; i++){
   routeLayer.add(segmentGraphic);
 }
 
-  ⭐ Zoom to full route extent
-view.goTo(routeGraphic.geometry.extent.expand(1.3));
+ // ⭐ Zoom to full route extent
+view.goTo(routeLayer.fullExtent.expand(1.3));
 document.getElementById("status3").innerHTML =
   "Status: Route creation successful ✔";
 
@@ -516,6 +515,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
