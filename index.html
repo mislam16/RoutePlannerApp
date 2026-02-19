@@ -269,40 +269,45 @@ searchWidget.on("select-result", function(event){
     stops = [];
     graphicsLayer.removeAll();
 
-    for (let i = 1; i < rows.length; i++) {
-      const cols = rows[i].split(",").map(c => c.trim());
-      if (cols.length < 3) continue;
+   const geocodePromises = [];
 
-      const address = (cols[0] + " " + cols[1] + " " + cols[2]).trim();
+for (let i = 1; i < rows.length; i++) {
 
-      try {
-        const response = await locator.addressToLocations(geocodeURL, {
-          address: { SingleLine: address },
-          maxLocations: 1
-        });
+  const cols = rows[i].split(",").map(c => c.trim());
+  if (cols.length < 3) continue;
 
-if (response.length > 0) {
-  const stopName = "Stop_" + i;  // ✅ declare first
+  const address = (cols[0] + " " + cols[1] + " " + cols[2]).trim();
 
-  const graphic = new Graphic({    // ✅ then create the graphic
-    geometry: response[0].location,
-    attributes: {
-      Name: stopName
-    },
- symbol: stopSymbol
+  const promise = locator.addressToLocations(geocodeURL, {
+    address: { SingleLine: address },
+    maxLocations: 1
+  }).then(response => {
+
+    if (response.length > 0) {
+
+      const stopName = "Stop_" + i;
+
+      const graphic = new Graphic({
+        geometry: response[0].location,
+        attributes: { Name: stopName },
+        symbol: stopSymbol
+      });
+
+      stopAddressLookup[stopName] = response[0].address;
+
+      graphicsLayer.add(graphic);
+      stops.push(graphic);
+    }
+
+  }).catch(err => {
+    console.error("Geocode error:", address, err);
   });
 
-  // ⭐ save address externally
-  stopAddressLookup[stopName] = response[0].address;
-
-  graphicsLayer.add(graphic);
-  stops.push(graphic);
+  geocodePromises.push(promise);
 }
 
-      } catch (err) {
-        console.error("Geocode error for address:", address, err);
-      }
-    }
+// ⭐ wait for all geocoding to finish
+await Promise.all(geocodePromises);
 
 document.getElementById("status2").innerHTML =
   "Status: Route addresses geocoded on map ✔ (" + stops.length + " stops)";
@@ -444,6 +449,7 @@ function downloadCSV(csv){
 </body>
 
 </html>
+
 
 
 
