@@ -198,7 +198,7 @@ IdentityManager.checkSignInStatus(info.portalUrl + "/sharing")
     IdentityManager.getCredential(info.portalUrl + "/sharing");
   });
 
-  const geocodeURL = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer";
+  const geocodeURL = "https://maconbibb.spatialitics.net/server/rest/services/MB_CompositeLocator/GeocodeServer";
   const routeURL   = "https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
 
   const map = new Map({ basemap: "arcgis-navigation" });
@@ -212,9 +212,17 @@ IdentityManager.checkSignInStatus(info.portalUrl + "/sharing")
   
 const searchWidget = new Search({
   view: view,
-  popupEnabled:false
+  popupEnabled: false,
+  includeDefaultSources: false,   // 🔥 disables world geocoder
+  sources: [{
+    url: geocodeURL,
+    singleLineFieldName: "SingleLine", // usually required
+    name: "MB_CompositeLocator",
+    placeholder: "Search address",
+    maxResults: 5,
+    maxSuggestions: 5
+  }]
 });
-
 searchWidget.container = "searchDiv";
 
 
