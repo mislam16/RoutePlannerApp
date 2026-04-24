@@ -233,7 +233,7 @@ searchWidget.container = "searchDiv";
   let stops = [];
   let optimizedStops = [];
   let startLocation = null;
-  let stopAddressLookup = {};
+  let stopDataLookup = {};
   
 searchWidget.on("select-result", function(event){
 
@@ -260,7 +260,13 @@ searchWidget.on("select-result", function(event){
       const cols = rows[i].split(",").map(c => c.trim());
       if (cols.length < 3) continue;
 
-      const address = (cols[0] + " " + cols[1] + " " + cols[2]).trim();
+      const businessLicense = cols[0];
+const businessName    = cols[1];
+const address         = cols[2];
+const city            = cols[3];
+const state           = cols[4];
+
+const fullAddress = (address + " " + city + " " + state).trim();
 
       try {
         const response = await locator.addressToLocations(geocodeURL, {
@@ -274,14 +280,23 @@ if (response.length > 0) {
   const graphic = new Graphic({    // ✅ then create the graphic
     geometry: response[0].location,
     attributes: {
-      Name: stopName
-    },
+  Name: stopName,
+  BusinessLicenseNumber: businessLicense,
+  BusinessName: businessName,
+  Address: address
+},
     symbol: { type: "simple-marker", size: 8 }
   });
 
   // ⭐ save address externally
-  stopAddressLookup[stopName] = response[0].address;
-
+  stopDataLookup[stopName] = {
+  BusinessLicenseNumber: businessLicense,
+  BusinessName: businessName,
+  Address: address,
+  City: city,
+  State: state,
+  MatchedAddress: response[0].address
+};
   graphicsLayer.add(graphic);
   stops.push(graphic);
 }
@@ -392,20 +407,24 @@ console.log("Optimized order:", optimizedStops);
       return;
     }
 
-    let csv = "Sequence,Address,Longitude,Latitude\n";
+   let csv = "Sequence,BusinessLicenseNumber,BusinessName,Address,Longitude,Latitude\n";
 
 optimizedStops.forEach(function(stop, i){
 
   const stopName = stop.attributes?.Name;
 
-  const addr =
-    stopAddressLookup[stopName] ||
-    stop.attributes?.Name || "";
+  const data = stopDataLookup[stopName] || {};
 
-  csv += (i+1) + "," +
-         '"' + addr + '"' + "," +
-         stop.geometry.x + "," +
-         stop.geometry.y + "\n";
+const businessLicense = data.BusinessLicenseNumber || "";
+const businessName    = data.BusinessName || "";
+const address         = data.Address || "";
+
+csv += (i+1) + "," +
+       '"' + businessLicense + '",' +
+       '"' + businessName + '",' +
+       '"' + address + '",' +
+       stop.geometry.x + "," +
+       stop.geometry.y + "\n";
 });
 
 
