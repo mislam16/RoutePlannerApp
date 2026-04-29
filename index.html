@@ -233,8 +233,7 @@ searchWidget.container = "searchDiv";
   let stops = [];
   let optimizedStops = [];
   let startLocation = null;
-  let stopAddressLookup = {};
-  
+let stopAttributeLookup = {};  
 searchWidget.on("select-result", function(event){
 
   startLocation = event.result.feature.geometry;
@@ -281,7 +280,7 @@ if (response.length > 0) {
   });
 
   // ⭐ save address externally
-  let stopAttributeLookup = {};
+  //let stopAttributeLookup = {};
   stopAttributeLookup[stopName] = {
   address: response[0].address,
   objectId: objectId
@@ -422,13 +421,19 @@ optimizedStops.forEach(function(stop, i){
   });
 
 function downloadCSV(csv){ 
-  document.getElementById("status4").innerHTML = "Status: CSV downloaded successfully ✔"; 
-  const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); 
-  // ⭐ iframe-safe forced download 
-  window.location.href = encodedUri; }
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "route_output.csv";
 
-});
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  document.getElementById("status4").innerHTML =
+    "Status: CSV downloaded successfully ✔";
+}
 </script>
 </body>
 
