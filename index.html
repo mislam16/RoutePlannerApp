@@ -233,7 +233,8 @@ searchWidget.container = "searchDiv";
   let stops = [];
   let optimizedStops = [];
   let startLocation = null;
-let stopAttributeLookup = {};  
+  let stopAddressLookup = {};
+  
 searchWidget.on("select-result", function(event){
 
   startLocation = event.result.feature.geometry;
@@ -257,9 +258,9 @@ searchWidget.on("select-result", function(event){
 
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i].split(",").map(c => c.trim());
-      if (cols.length < 4) continue;
-      const objectId = cols[0]; // ⭐ NEW
-      const address = (cols[1] + " " + cols[2] + " " + cols[3]).trim();
+      if (cols.length < 3) continue;
+
+      const address = (cols[0] + " " + cols[1] + " " + cols[2]).trim();
 
       try {
         const response = await locator.addressToLocations(geocodeURL, {
@@ -273,18 +274,13 @@ if (response.length > 0) {
   const graphic = new Graphic({    // ✅ then create the graphic
     geometry: response[0].location,
     attributes: {
-      Name: stopName,
-    OBJECTID: objectId
+      Name: stopName
     },
     symbol: { type: "simple-marker", size: 8 }
   });
 
   // ⭐ save address externally
-  //let stopAttributeLookup = {};
-  stopAttributeLookup[stopName] = {
-  address: response[0].address,
-  objectId: objectId
-};
+  stopAddressLookup[stopName] = response[0].address;
 
   graphicsLayer.add(graphic);
   stops.push(graphic);
@@ -396,19 +392,17 @@ console.log("Optimized order:", optimizedStops);
       return;
     }
 
-    let csv = "Sequence,OBJECTID,Address,Longitude,Latitude\n";
+    let csv = "Sequence,Address,Longitude,Latitude\n";
 
 optimizedStops.forEach(function(stop, i){
 
   const stopName = stop.attributes?.Name;
 
-  const lookup = stopAttributeLookup[stopName] || {};
-
-  const addr = lookup.address || "";
-  const objectId = lookup.objectId || "";
+  const addr =
+    stopAddressLookup[stopName] ||
+    stop.attributes?.Name || "";
 
   csv += (i+1) + "," +
-         objectId + "," +
          '"' + addr + '"' + "," +
          stop.geometry.x + "," +
          stop.geometry.y + "\n";
@@ -421,25 +415,17 @@ optimizedStops.forEach(function(stop, i){
   });
 
 function downloadCSV(csv){ 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  document.getElementById("status4").innerHTML = "Status: CSV downloaded successfully ✔"; 
+  const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); 
+  // ⭐ iframe-safe forced download 
+  window.location.href = encodedUri; }
 
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "route_output.csv";
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  document.getElementById("status4").innerHTML =
-    "Status: CSV downloaded successfully ✔";
-}
-  }); 
+});
 </script>
 </body>
 
 </html>
-
 
 
 
